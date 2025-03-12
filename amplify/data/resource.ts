@@ -1,4 +1,5 @@
 import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
+import { detectSpam } from "../functions/detect-spam/resource";
 
 /*== STEP 1 ===============================================================
 The section below creates a Todo database table with a "content" field. Try
@@ -10,9 +11,31 @@ const schema = a.schema({
   Todo: a
     .model({
       content: a.string(),
-    })
-    .authorization((allow) => [allow.publicApiKey()]),
-});
+    }),
+  Blog: a.model({
+    title: a.string().required(),
+    description: a.string(),
+    posts: a.hasMany("Post", "blogId"),
+  }),
+  Post: a.model({
+    title: a.string().required(),
+    description: a.string(),
+    blogId: a.id(),
+    blog: a.belongsTo("Blog", "blogId"),
+    comments: a.hasMany("Comment", "postId"),
+  }),
+  Comment: a.model({
+    content: a.string().required(),
+    postId: a.id(),
+    post: a.belongsTo("Post", "postId"),
+  }),
+  DetectSpam: a.query().arguments({
+    startTime: a.datetime(),
+    endTime: a.datetime(),
+  }).handler(a.handler.function(detectSpam)).returns(a.string())
+}).authorization((allow) => [allow.publicApiKey(), allow.resource(detectSpam)]);
+
+console.log(schema.transform()['schema'])
 
 export type Schema = ClientSchema<typeof schema>;
 
